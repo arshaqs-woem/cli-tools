@@ -3,7 +3,7 @@ import sys
 from collections import defaultdict
 
 
-def scan_folder(folder_path):
+def scan_folder(folder_path, filter_ext=None):
     if not os.path.isdir(folder_path):
         print(f"Error: '{folder_path}' is not a valid folder.")
         sys.exit(1)
@@ -15,6 +15,11 @@ def scan_folder(folder_path):
 
     for root, dirs, files in os.walk(folder_path):
         for filename in files:
+            ext = os.path.splitext(filename)[1].lower()
+
+            if filter_ext and ext != filter_ext:
+                continue
+
             filepath = os.path.join(root, filename)
             try:
                 size = os.path.getsize(filepath)
@@ -27,7 +32,6 @@ def scan_folder(folder_path):
             if size > largest_file[1]:
                 largest_file = (filepath, size)
 
-            ext = os.path.splitext(filename)[1].lower()
             file_types[ext if ext else "(no extension)"] += 1
 
     return total_files, total_size, largest_file, file_types
@@ -41,12 +45,14 @@ def format_size(size_bytes):
     return f"{size_bytes:.2f} TB"
 
 
-def generate_report(folder_path, total_files, total_size, largest_file, file_types):
+def generate_report(folder_path, total_files, total_size, largest_file, file_types, filter_ext=None):
     lines = []
     lines.append("=" * 40)
     lines.append("FOLDER SCAN REPORT")
     lines.append("=" * 40)
     lines.append(f"Folder:       {folder_path}")
+    if filter_ext:
+        lines.append(f"Filter:       {filter_ext} files only")
     lines.append(f"Total files:  {total_files}")
     lines.append(f"Total size:   {format_size(total_size)}")
 
@@ -65,12 +71,21 @@ def generate_report(folder_path, total_files, total_size, largest_file, file_typ
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python folder_scanner.py <folder_path>")
+        print("Usage: python folder_scanner.py <folder_path> [--ext .pdf]")
         sys.exit(1)
 
     folder_path = sys.argv[1]
-    total_files, total_size, largest_file, file_types = scan_folder(folder_path)
-    report = generate_report(folder_path, total_files, total_size, largest_file, file_types)
+    filter_ext = None
+
+    if "--ext" in sys.argv:
+        idx = sys.argv.index("--ext")
+        if idx + 1 < len(sys.argv):
+            filter_ext = sys.argv[idx + 1].lower()
+            if not filter_ext.startswith("."):
+                filter_ext = "." + filter_ext
+
+    total_files, total_size, largest_file, file_types = scan_folder(folder_path, filter_ext)
+    report = generate_report(folder_path, total_files, total_size, largest_file, file_types, filter_ext)
 
     print(report)
 
