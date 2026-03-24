@@ -11,6 +11,8 @@ def scan_folder(folder_path, filter_ext=None):
     total_files = 0
     total_size = 0
     largest_file = ("", 0)
+    oldest_file = ("", float("inf"))
+    newest_file = ("", 0)
     file_types = defaultdict(int)
 
     for root, dirs, files in os.walk(folder_path):
@@ -23,6 +25,7 @@ def scan_folder(folder_path, filter_ext=None):
             filepath = os.path.join(root, filename)
             try:
                 size = os.path.getsize(filepath)
+                mtime = os.path.getmtime(filepath)
             except OSError:
                 continue
 
@@ -32,9 +35,15 @@ def scan_folder(folder_path, filter_ext=None):
             if size > largest_file[1]:
                 largest_file = (filepath, size)
 
+            if mtime < oldest_file[1]:
+                oldest_file = (filepath, mtime)
+
+            if mtime > newest_file[1]:
+                newest_file = (filepath, mtime)
+
             file_types[ext if ext else "(no extension)"] += 1
 
-    return total_files, total_size, largest_file, file_types
+    return total_files, total_size, largest_file, oldest_file, newest_file, file_types
 
 
 def format_size(size_bytes):
@@ -45,7 +54,12 @@ def format_size(size_bytes):
     return f"{size_bytes:.2f} TB"
 
 
-def generate_report(folder_path, total_files, total_size, largest_file, file_types, filter_ext=None):
+def format_time(mtime):
+    import datetime
+    return datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def generate_report(folder_path, total_files, total_size, largest_file, oldest_file, newest_file, file_types, filter_ext=None):
     lines = []
     lines.append("=" * 40)
     lines.append("FOLDER SCAN REPORT")
@@ -60,6 +74,13 @@ def generate_report(folder_path, total_files, total_size, largest_file, file_typ
         lines.append(f"Largest file: {largest_file[0]} ({format_size(largest_file[1])})")
     else:
         lines.append("Largest file: N/A")
+
+    if oldest_file[0]:
+        lines.append(f"Oldest file:  {oldest_file[0]} ({format_time(oldest_file[1])})")
+        lines.append(f"Newest file:  {newest_file[0]} ({format_time(newest_file[1])})")
+    else:
+        lines.append("Oldest file:  N/A")
+        lines.append("Newest file:  N/A")
 
     lines.append("\nFile types breakdown:")
     for ext, count in sorted(file_types.items(), key=lambda x: -x[1]):
@@ -84,8 +105,8 @@ def main():
             if not filter_ext.startswith("."):
                 filter_ext = "." + filter_ext
 
-    total_files, total_size, largest_file, file_types = scan_folder(folder_path, filter_ext)
-    report = generate_report(folder_path, total_files, total_size, largest_file, file_types, filter_ext)
+    total_files, total_size, largest_file, oldest_file, newest_file, file_types = scan_folder(folder_path, filter_ext)
+    report = generate_report(folder_path, total_files, total_size, largest_file, oldest_file, newest_file, file_types, filter_ext)
 
     print(report)
 
