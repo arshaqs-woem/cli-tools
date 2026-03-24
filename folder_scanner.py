@@ -92,7 +92,7 @@ def generate_report(folder_path, total_files, total_size, largest_file, oldest_f
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python folder_scanner.py <folder_path> [--ext .pdf]")
+        print("Usage: python3 folder_scanner.py <path> [--ext .pdf] [--no-hidden]")
         sys.exit(1)
 
     folder_path = sys.argv[1]
